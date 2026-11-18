@@ -1,0 +1,504 @@
+<title>Pomodoro Agenda</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: timer column on the left, today's agenda and Todoist tasks stacked on the right; one column on phones.
+   Color: three mode accents (foco, pausa curta, pausa longa) tint the whole page over a cool neutral base.
+   Type: Space Grotesk for the clock and headings, Inter for everything else. */
+:root {
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --base: #eef0f3;
+  --surface: #ffffff;
+  --fg: #1b2028;
+  --muted: #5b6573;
+  --line: #d6dbe2;
+  --focus: #b8453b;
+  --short: #2c7a74;
+  --long: #3a6aa3;
+  --accent: var(--focus);
+  --on-accent: #ffffff;
+  --warn: #a4501a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --base: #14171c; --surface: #1d2128; --fg: #eceff3; --muted: #a0a9b6; --line: #313845;
+    --focus: #a8372e; --short: #236963; --long: #2f5a8d; --warn: #e0a06a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --base: #14171c; --surface: #1d2128; --fg: #eceff3; --muted: #a0a9b6; --line: #313845;
+  --focus: #a8372e; --short: #236963; --long: #2f5a8d; --warn: #e0a06a;
+  color-scheme: dark;
+}
+body { --accent: var(--focus); }
+body[data-mode="short"] { --accent: var(--short); }
+body[data-mode="long"] { --accent: var(--long); }
+body {
+  background: color-mix(in srgb, var(--accent) 14%, var(--base));
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.45;
+  padding-inline: 0;
+  transition: background-color .4s;
+}
+* { box-sizing: border-box; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 18px; }
+h1 { font: 700 20px/1 var(--font-display); letter-spacing: -.01em; margin: 0; }
+.today-stat { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.today-stat strong { color: var(--fg); font-weight: 600; }
+.hbtns { display: flex; gap: 8px; align-items: center; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; font-size: 13px; }
+.ghost:hover { background: color-mix(in srgb, var(--fg) 7%, transparent); }
+
+.grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 820px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+.timer {
+  background: var(--accent); color: var(--on-accent);
+  border-radius: 16px; padding: 22px 22px 26px;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  transition: background-color .4s;
+}
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.tab { background: transparent; border: 0; color: var(--on-accent); opacity: .78; padding: 7px 13px; border-radius: 8px; font-size: 14px; font-weight: 500; }
+.tab[aria-selected="true"] { background: rgba(255,255,255,.2); opacity: 1; }
+.tab:hover { opacity: 1; }
+.clock { font: 700 clamp(64px, 17vw, 112px)/1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+.bar { width: 100%; height: 4px; border-radius: 2px; background: rgba(255,255,255,.25); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--on-accent); transition: width .3s linear; }
+.start {
+  background: var(--on-accent); color: var(--accent); border: 0; border-radius: 10px;
+  padding: 13px 0; width: min(220px, 100%); font: 700 18px var(--font-display); letter-spacing: .04em; text-transform: uppercase;
+  box-shadow: 0 5px 0 rgba(0,0,0,.18);
+}
+.start:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+.sub { display: flex; gap: 10px; align-items: center; min-height: 22px; font-size: 13px; opacity: .92; }
+.sub button { background: transparent; border: 0; color: var(--on-accent); text-decoration: underline; padding: 2px 4px; font-size: 13px; }
+.focus-on { text-align: center; font-size: 14px; max-width: 100%; overflow-wrap: anywhere; }
+.focus-on small { display: block; opacity: .75; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
+.panel h2 { font: 600 15px/1.2 var(--font-display); margin: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.panel h2 span { font: 400 12px var(--font-body); color: var(--muted); }
+.next { margin: 12px 0 4px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 12%, var(--surface)); font-size: 13px; }
+.next b { font-weight: 600; }
+ul.list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; }
+ul.list li { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-top: 1px solid var(--line); min-width: 0; }
+ul.list li:first-child { border-top: 0; }
+.when { flex: 0 0 52px; font: 500 13px var(--font-body); color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 1px; }
+.what { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.what small { display: block; color: var(--muted); font-size: 12px; }
+.what .late { color: var(--warn); }
+li.now .when, li.now .what { color: var(--accent); font-weight: 600; }
+.check { flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--muted); background: transparent; margin-top: 1px; padding: 0; }
+.check:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.pick { flex: 1 1 auto; min-width: 0; text-align: left; background: transparent; border: 0; padding: 0; overflow-wrap: anywhere; }
+li.active .pick { font-weight: 600; color: var(--accent); }
+.pick small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.pick small .late { color: var(--warn); }
+.count { flex: 0 0 auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.add { display: flex; gap: 8px; margin-top: 12px; }
+.add input { flex: 1 1 auto; min-width: 0; background: var(--base); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font: inherit; }
+.add button { background: var(--accent); color: var(--on-accent); border: 0; border-radius: 8px; padding: 0 14px; font-weight: 600; }
+.state { color: var(--muted); font-size: 13px; padding: 10px 0 2px; }
+.state button { background: transparent; border: 0; color: var(--accent); text-decoration: underline; padding: 0; font-size: 13px; }
+.settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 12px; }
+.settings label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.settings input[type="number"] { background: var(--base); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; width: 100%; }
+.settings .row { flex-direction: row; align-items: center; gap: 8px; grid-column: 1 / -1; color: var(--fg); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { body, .timer, .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pomodoro Agenda</h1>
+    <div class="hbtns">
+      <span class="today-stat" id="todayStat" aria-live="polite"></span>
+      <button class="ghost" id="settingsBtn" aria-expanded="false" aria-controls="settingsPanel">Ajustes</button>
+    </div>
+  </header>
+
+  <div class="panel" id="settingsPanel" hidden style="margin-bottom:16px">
+    <h2>Ajustes do timer <span>minutos</span></h2>
+    <div class="settings">
+      <label for="sFocus">Foco<input id="sFocus" type="number" min="1" max="180"></label>
+      <label for="sShort">Pausa curta<input id="sShort" type="number" min="1" max="60"></label>
+      <label for="sLong">Pausa longa<input id="sLong" type="number" min="1" max="90"></label>
+      <label for="sEvery">Pausa longa a cada<input id="sEvery" type="number" min="2" max="12"></label>
+      <label class="row" for="sAuto"><input id="sAuto" type="checkbox"> Iniciar o próximo ciclo automaticamente</label>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <section class="timer" aria-label="Timer">
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" id="tab-focus" data-mode="focus" aria-selected="true">Foco</button>
+          <button class="tab" role="tab" id="tab-short" data-mode="short" aria-selected="false">Pausa curta</button>
+          <button class="tab" role="tab" id="tab-long" data-mode="long" aria-selected="false">Pausa longa</button>
+        </div>
+        <div class="clock" id="clock" role="timer" aria-live="off">25:00</div>
+        <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+        <button class="start" id="startBtn">Iniciar</button>
+        <div class="sub">
+          <span id="cycleInfo"></span>
+          <button id="skipBtn" title="Pular para o próximo ciclo">Pular</button>
+          <button id="resetBtn" title="Voltar ao tempo inicial">Zerar</button>
+        </div>
+        <div class="focus-on" id="focusOn"></div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-labelledby="agTitle">
+        <h2 id="agTitle">Agenda de hoje <span id="agDate"></span></h2>
+        <div id="agBody"><div class="state">Carregando o Google Agenda…</div></div>
+      </section>
+
+      <section class="panel" aria-labelledby="tkTitle">
+        <h2 id="tkTitle">Tarefas do Todoist <span id="tkCount"></span></h2>
+        <div id="tkBody"><div class="state">Carregando o Todoist…</div></div>
+        <form class="add" id="addForm">
+          <input id="addInput" type="text" placeholder="Nova tarefa para hoje" autocomplete="off" aria-label="Nova tarefa para hoje">
+          <button type="submit" id="addBtn">Adicionar</button>
+        </form>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var TODOIST = "Todoist", GCAL = "Google Calendar";
+
+  /* ---------- storage helpers (per-viewer conveniences only) ---------- */
+  function lsGet(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+  var settings = Object.assign({ focus: 25, short: 5, long: 15, every: 4, auto: true }, lsGet("pa-settings", {}));
+  var LABEL = { focus: "Foco", short: "Pausa curta", long: "Pausa longa" };
+  var mode = "focus", running = false, endAt = 0, remaining = settings.focus * 60000;
+  var cycles = 0, activeId = lsGet("pa-active", null);
+  var tasks = [], tasksState = "loading", events = [], eventsState = "loading";
+  var stats = { count: 0, minutes: 0, perTask: {} };
+  var dayKey = null, dbDoc = null, wakeLock = null, audioCtx = null;
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function localDate(d) { d = d || new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function modeMs(m) { return settings[m] * 60000; }
+
+  /* ---------- timer ---------- */
+  function fmt(ms) { var s = Math.max(0, Math.ceil(ms / 1000)); return pad(Math.floor(s / 60)) + ":" + pad(s % 60); }
+  function renderTimer() {
+    var left = running ? Math.max(0, endAt - Date.now()) : remaining;
+    $("clock").textContent = fmt(left);
+    $("barFill").style.width = (100 * (1 - left / modeMs(mode))) + "%";
+    document.title = (running ? fmt(left) + " · " + LABEL[mode] : "Pomodoro Agenda");
+  }
+  function renderControls() {
+    document.body.setAttribute("data-mode", mode);
+    ["focus", "short", "long"].forEach(function (m) { $("tab-" + m).setAttribute("aria-selected", String(m === mode)); });
+    $("startBtn").textContent = running ? "Pausar" : "Iniciar";
+    var n = cycles % settings.every;
+    $("cycleInfo").textContent = "Ciclo " + (n + 1) + " de " + settings.every;
+    var t = tasks.filter(function (x) { return x.id === activeId; })[0];
+    var box = $("focusOn"); box.textContent = "";
+    if (mode === "focus") {
+      var s = document.createElement("small"); s.textContent = "Em foco";
+      box.appendChild(s);
+      box.appendChild(document.createTextNode(t ? t.content : "Escolha uma tarefa da lista"));
+    }
+    renderTimer();
+  }
+  function setMode(m, startNow) {
+    mode = m; running = false; remaining = modeMs(m); releaseWake();
+    renderControls();
+    if (startNow) start();
+  }
+  function start() {
+    ensureAudio();
+    running = true; endAt = Date.now() + remaining;
+    requestWake(); renderControls();
+  }
+  function pause() { remaining = Math.max(0, endAt - Date.now()); running = false; releaseWake(); renderControls(); }
+  function requestWake() { try { if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function (l) { wakeLock = l; }, function () {}); } catch (e) {} }
+  function releaseWake() { try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {} }
+  function ensureAudio() { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === "suspended") audioCtx.resume(); } catch (e) {} }
+  function beep() {
+    if (!audioCtx) return;
+    try {
+      [0, 0.28, 0.56].forEach(function (off) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = "sine"; o.frequency.value = 880;
+        g.gain.setValueAtTime(0.0001, audioCtx.currentTime + off);
+        g.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + off + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + off + 0.22);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(audioCtx.currentTime + off); o.stop(audioCtx.currentTime + off + 0.25);
+      });
+    } catch (e) {}
+  }
+  function finish() {
+    var wasFocus = mode === "focus";
+    running = false; releaseWake(); beep();
+    if (wasFocus) { recordPomodoro(); cycles += 1; }
+    var next = wasFocus ? (cycles % settings.every === 0 ? "long" : "short") : "focus";
+    setMode(next, settings.auto);
+  }
+  setInterval(function () {
+    if (running && endAt - Date.now() <= 0) finish(); else renderTimer();
+  }, 250);
+
+  $("startBtn").addEventListener("click", function () { running ? pause() : start(); });
+  $("skipBtn").addEventListener("click", function () {
+    var wasFocus = mode === "focus";
+    if (wasFocus) cycles += 1;
+    setMode(wasFocus ? (cycles % settings.every === 0 ? "long" : "short") : "focus", false);
+  });
+  $("resetBtn").addEventListener("click", function () { setMode(mode, false); });
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) {
+    b.addEventListener("click", function () { setMode(b.getAttribute("data-mode"), false); });
+  });
+
+  /* ---------- settings ---------- */
+  $("settingsBtn").addEventListener("click", function () {
+    var p = $("settingsPanel"); p.hidden = !p.hidden;
+    $("settingsBtn").setAttribute("aria-expanded", String(!p.hidden));
+  });
+  var fields = { sFocus: "focus", sShort: "short", sLong: "long", sEvery: "every" };
+  Object.keys(fields).forEach(function (id) {
+    $(id).value = settings[fields[id]];
+    $(id).addEventListener("change", function () {
+      var v = Math.round(Number($(id).value));
+      var lo = 1, hi = Number($(id).max);
+      if (!(v >= lo)) v = settings[fields[id]];
+      v = Math.min(hi, v);
+      $(id).value = v; settings[fields[id]] = v; lsSet("pa-settings", settings);
+      if (!running) remaining = modeMs(mode);
+      renderControls();
+    });
+  });
+  $("sAuto").checked = !!settings.auto;
+  $("sAuto").addEventListener("change", function () { settings.auto = $("sAuto").checked; lsSet("pa-settings", settings); });
+
+  /* ---------- daily stats: shared db when available, localStorage otherwise ---------- */
+  function renderStats() {
+    var el = $("todayStat"); el.textContent = "";
+    var s = document.createElement("span");
+    s.appendChild(document.createTextNode("Hoje: "));
+    var b = document.createElement("strong"); b.textContent = stats.count + (stats.count === 1 ? " pomodoro" : " pomodoros");
+    s.appendChild(b);
+    var h = Math.floor(stats.minutes / 60), m = stats.minutes % 60;
+    s.appendChild(document.createTextNode(" · " + (h ? h + " h " : "") + m + " min de foco"));
+    el.appendChild(s);
+    renderTasks();
+  }
+  function normStats(d) {
+    d = d || {};
+    return { count: Number(d.count) || 0, minutes: Number(d.minutes) || 0, perTask: (d.perTask && typeof d.perTask === "object") ? d.perTask : {} };
+  }
+  function recordPomodoro() {
+    var next = normStats(stats);
+    next.count += 1; next.minutes += settings.focus;
+    next.perTask = Object.assign({}, next.perTask);
+    if (activeId) next.perTask[activeId] = (Number(next.perTask[activeId]) || 0) + 1;
+    stats = next; renderStats();
+    if (dbDoc) { dbDoc.set(next).catch(function () { lsSet("pa-stats-" + dayKey, next); }); }
+    else lsSet("pa-stats-" + dayKey, next);
+  }
+  function initStats() {
+    dayKey = localDate();
+    stats = normStats(lsGet("pa-stats-" + dayKey, null));
+    renderStats();
+    if (!window.claude || !window.claude.use) return;
+    window.claude.use("db").then(function (db) {
+      if (!db) return;
+      dbDoc = db.doc("stats/" + dayKey);
+      var timer = setTimeout(function () {}, 10000);
+      dbDoc.onSnapshot(function (snap) {
+        clearTimeout(timer);
+        stats = normStats(snap.exists ? snap.data() : null);
+        renderStats();
+      }, function () { dbDoc = null; });
+    }, function () {});
+  }
+
+  /* ---------- connectors ---------- */
+  var mcp = null;
+  function errText(e, name) {
+    var c = e && e.code;
+    if (c === "needs_reauth") return "Reconecte o " + name + " em claude.ai, Configurações, Conectores.";
+    if (c === "server_not_connected" || c === "server_not_found") return "Adicione o " + name + " em claude.ai, Configurações, Conectores.";
+    if (c === "selection_required") return "Escolha qual conta do " + name + " usar quando o claude.ai perguntar.";
+    if (c === "not_in_manifest" || c === "approval_required" || c === "consent_required" || c === "not_granted") return "Esta página ainda não tem permissão para usar o " + name + ".";
+    if (c === "blocked_by_policy") return "Sua organização bloqueou o acesso ao " + name + ".";
+    if (c === "server_unavailable") return "O " + name + " não respondeu. A página tenta de novo em instantes.";
+    return "Não foi possível ler o " + name + ".";
+  }
+  function stateBox(parent, text, retry) {
+    parent.textContent = "";
+    var d = document.createElement("div"); d.className = "state"; d.textContent = text + " ";
+    if (retry) { var b = document.createElement("button"); b.type = "button"; b.textContent = "Permitir e tentar de novo"; b.addEventListener("click", retry); d.appendChild(b); }
+    parent.appendChild(d);
+  }
+
+  /* Todoist */
+  function parseDue(t) {
+    var s = t.dueDate || (t.due && (t.due.datetime || t.due.date)) || "";
+    return typeof s === "string" ? s : "";
+  }
+  function renderTasks() {
+    var body = $("tkBody"), count = $("tkCount");
+    if (tasksState === "loading") return;
+    if (tasksState !== "ok") { count.textContent = ""; stateBox(body, tasksState, askMcp); return; }
+    count.textContent = tasks.length ? tasks.length + (tasks.length === 1 ? " pendente" : " pendentes") : "";
+    body.textContent = "";
+    if (!tasks.length) { var d = document.createElement("div"); d.className = "state"; d.textContent = "Nenhuma tarefa para hoje. Adicione uma abaixo."; body.appendChild(d); return; }
+    var today = localDate(), ul = document.createElement("ul"); ul.className = "list";
+    tasks.forEach(function (t) {
+      var li = document.createElement("li"); if (t.id === activeId) li.className = "active";
+      var chk = document.createElement("button"); chk.type = "button"; chk.className = "check";
+      chk.setAttribute("aria-label", "Concluir: " + t.content);
+      chk.addEventListener("click", function () { completeTask(t); });
+      var pick = document.createElement("button"); pick.type = "button"; pick.className = "pick";
+      pick.setAttribute("aria-pressed", String(t.id === activeId));
+      pick.appendChild(document.createTextNode(t.content));
+      var due = parseDue(t), sm = document.createElement("small"), bits = [];
+      if (due) {
+        var late = due.slice(0, 10) < today;
+        var time = due.indexOf("T") > -1 ? due.slice(11, 16) : "";
+        if (late) { var l = document.createElement("span"); l.className = "late"; l.textContent = "Atrasada · " + due.slice(8, 10) + "/" + due.slice(5, 7); sm.appendChild(l); bits.push(1); }
+        else if (time) { sm.appendChild(document.createTextNode(time)); bits.push(1); }
+      }
+      if (t.duration) { sm.appendChild(document.createTextNode((bits.length ? " · " : "") + t.duration)); bits.push(1); }
+      if (bits.length) pick.appendChild(sm);
+      pick.addEventListener("click", function () { activeId = (activeId === t.id ? null : t.id); lsSet("pa-active", activeId); renderTasks(); renderControls(); });
+      var n = Number(stats.perTask[t.id]) || 0, cnt = document.createElement("span"); cnt.className = "count";
+      cnt.textContent = n ? n + (n === 1 ? " pomodoro" : " pomodoros") : "";
+      li.appendChild(chk); li.appendChild(pick); li.appendChild(cnt);
+      ul.appendChild(li);
+    });
+    body.appendChild(ul);
+  }
+  function completeTask(t) {
+    if (!mcp) return;
+    var prev = tasks.slice();
+    tasks = tasks.filter(function (x) { return x.id !== t.id; });
+    if (activeId === t.id) { activeId = null; lsSet("pa-active", null); }
+    renderTasks(); renderControls();
+    mcp.callTool(TODOIST, "complete-tasks", { ids: [t.id] }).then(function () { return mcp.invalidate(TODOIST); }).catch(function (e) {
+      tasks = prev; renderTasks(); renderControls();
+      flash(errText(e, "Todoist"));
+    });
+  }
+  $("addForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var input = $("addInput"), text = input.value.trim();
+    if (!text || !mcp) return;
+    $("addBtn").disabled = true;
+    mcp.callTool(TODOIST, "add-tasks", { tasks: [{ content: text, dueString: "today" }] }).then(function () {
+      input.value = ""; return mcp.invalidate(TODOIST);
+    }).catch(function (e) { flash(errText(e, "Todoist")); }).then(function () { $("addBtn").disabled = false; });
+  });
+  var flashTimer = null;
+  function flash(msg) {
+    var el = $("tkCount"); el.textContent = msg;
+    clearTimeout(flashTimer); flashTimer = setTimeout(renderTasks, 6000);
+  }
+
+  /* Google Agenda */
+  function toDate(v) {
+    if (!v) return null;
+    if (typeof v === "object") v = v.dateTime || v.date || "";
+    if (typeof v !== "string" || !v) return null;
+    var d = new Date(v.length === 10 ? v + "T00:00:00" : v);
+    return isNaN(d) ? null : d;
+  }
+  function renderEvents() {
+    var body = $("agBody");
+    if (eventsState === "loading") return;
+    if (eventsState !== "ok") { stateBox(body, eventsState, askMcp); return; }
+    body.textContent = "";
+    var now = new Date();
+    var list = events.map(function (e) {
+      var allDay = !!(e.start && typeof e.start === "object" && e.start.date && !e.start.dateTime);
+      return { title: e.summary || e.title || "Sem título", start: toDate(e.start || e.startTime), end: toDate(e.end || e.endTime), allDay: allDay, where: e.location || "" };
+    }).filter(function (e) { return e.start; }).sort(function (a, b) { return a.start - b.start; });
+    var next = list.filter(function (e) { return !e.allDay && e.start > now; })[0];
+    if (next) {
+      var mins = Math.round((next.start - now) / 60000);
+      var nx = document.createElement("div"); nx.className = "next";
+      var b = document.createElement("b"); b.textContent = next.title;
+      nx.appendChild(document.createTextNode("Próximo: ")); nx.appendChild(b);
+      nx.appendChild(document.createTextNode(" em " + (mins >= 60 ? Math.floor(mins / 60) + " h " + (mins % 60 ? mins % 60 + " min" : "") : mins + " min")));
+      body.appendChild(nx);
+    }
+    if (!list.length) { var d = document.createElement("div"); d.className = "state"; d.textContent = "Nenhum compromisso hoje."; body.appendChild(d); return; }
+    var ul = document.createElement("ul"); ul.className = "list";
+    list.forEach(function (e) {
+      var li = document.createElement("li");
+      if (!e.allDay && e.start <= now && (!e.end || e.end > now)) li.className = "now";
+      var w = document.createElement("span"); w.className = "when"; w.textContent = e.allDay ? "Dia todo" : pad(e.start.getHours()) + ":" + pad(e.start.getMinutes());
+      var t = document.createElement("span"); t.className = "what"; t.textContent = e.title;
+      if (e.where) { var s = document.createElement("small"); s.textContent = e.where; t.appendChild(s); }
+      li.appendChild(w); li.appendChild(t); ul.appendChild(li);
+    });
+    body.appendChild(ul);
+  }
+  setInterval(function () { if (eventsState === "ok") renderEvents(); }, 60000);
+
+  function watch() {
+    var today = new Date(), tomorrow = new Date(today.getTime() + 86400000);
+    $("agDate").textContent = today.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+    mcp.watchTool(TODOIST, "find-tasks-by-date", { startDate: "today", daysCount: 1, limit: 50 }, function (ev) {
+      if (ev.type === "error") { if (tasksState !== "ok" || /^(needs_reauth|server_not_connected|not_in_manifest|blocked_by_policy|approval_required|consent_required)$/.test(ev.error.code)) { tasksState = errText(ev.error, "Todoist"); tasks = []; renderTasks(); } return; }
+      var p = ev.result.payload || {};
+      tasks = (Array.isArray(p.tasks) ? p.tasks : []).filter(function (t) { return !t.checked; })
+        .sort(function (a, b) { return parseDue(a).localeCompare(parseDue(b)); });
+      tasksState = "ok"; renderTasks(); renderControls();
+    }, { refetchInterval: 60000 });
+    mcp.watchTool(GCAL, "list_events", {
+      startTime: localDate(today) + "T00:00:00", endTime: localDate(tomorrow) + "T00:00:00", orderBy: "startTime", pageSize: 50
+    }, function (ev) {
+      if (ev.type === "error") { if (eventsState !== "ok" || /^(needs_reauth|server_not_connected|not_in_manifest|blocked_by_policy|approval_required|consent_required)$/.test(ev.error.code)) { eventsState = errText(ev.error, "Google Agenda"); events = []; renderEvents(); } return; }
+      var p = ev.result.payload || {};
+      events = Array.isArray(p.events) ? p.events : (Array.isArray(p.items) ? p.items : []);
+      eventsState = "ok"; renderEvents();
+    }, { refetchInterval: 120000 });
+  }
+  /* watches never ask for consent; one deliberate click makes a call that does */
+  function askMcp() {
+    if (!mcp) return;
+    Promise.all([
+      mcp.callTool(TODOIST, "find-tasks-by-date", { startDate: "today", daysCount: 1, limit: 1 }).catch(function () {}),
+      mcp.callTool(GCAL, "list_events", { pageSize: 1 }).catch(function () {})
+    ]).then(function () { return mcp.invalidate(); }).catch(function () {});
+  }
+  function noMcp() {
+    tasksState = eventsState = "Os conectores do Todoist e do Google Agenda só funcionam quando a página é aberta no claude.ai.";
+    renderTasks(); renderEvents();
+  }
+  function initMcp() {
+    if (!window.claude || !window.claude.use) { noMcp(); return; }
+    window.claude.use("mcp").then(function (m) { if (!m) { noMcp(); return; } mcp = m; watch(); }, noMcp);
+  }
+
+  renderControls();
+  initStats();
+  initMcp();
+})();
+</script>
