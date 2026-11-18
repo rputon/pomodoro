@@ -436,7 +436,7 @@ li.active .pick { font-weight: 600; color: var(--accent); }
     var now = new Date();
     var list = events.map(function (e) {
       var allDay = !!(e.start && typeof e.start === "object" && e.start.date && !e.start.dateTime);
-      return { title: e.summary || e.title || "Sem título", start: toDate(e.start || e.startTime), end: toDate(e.end || e.endTime), allDay: allDay, where: e.location || "" };
+      return { title: e.summary || e.title || "Sem título", start: toDate(e.start || e.startTime), end: toDate(e.end || e.endTime), allDay: allDay, where: e.location || e.__cal || "" };
     }).filter(function (e) { return e.start; }).sort(function (a, b) { return a.start - b.start; });
     var next = list.filter(function (e) { return !e.allDay && e.start > now; })[0];
     if (next) {
@@ -471,21 +471,48 @@ li.active .pick { font-weight: 600; color: var(--accent); }
         .sort(function (a, b) { return parseDue(a).localeCompare(parseDue(b)); });
       tasksState = "ok"; renderTasks(); renderControls();
     }, { refetchInterval: 60000 });
-    mcp.watchTool(GCAL, "list_events", {
-      startTime: localDate(today) + "T00:00:00", endTime: localDate(tomorrow) + "T00:00:00", orderBy: "startTime", pageSize: 50
-    }, function (ev) {
-      if (ev.type === "error") { if (eventsState !== "ok" || /^(needs_reauth|server_not_connected|not_in_manifest|blocked_by_policy|approval_required|consent_required)$/.test(ev.error.code)) { eventsState = errText(ev.error, "Google Agenda"); events = []; renderEvents(); } return; }
-      var p = ev.result.payload || {};
-      events = Array.isArray(p.events) ? p.events : (Array.isArray(p.items) ? p.items : []);
-      eventsState = "ok"; renderEvents();
-    }, { refetchInterval: 120000 });
+    loadEvents();
+    setInterval(loadEvents, 120000);
+  }
+  /* Events live in several calendars (Trabalho, Aulas, ...), so read the calendar list first.
+     The "Todoist" calendar only mirrors the tasks shown on the other panel, so it is skipped. */
+  var loadingEvents = false;
+  function loadEvents() {
+    if (!mcp || loadingEvents) return Promise.resolve();
+    loadingEvents = true;
+    var today = new Date(), tomorrow = new Date(today.getTime() + 86400000);
+    var range = { startTime: localDate(today) + "T00:00:00", endTime: localDate(tomorrow) + "T00:00:00", orderBy: "startTime", pageSize: 50 };
+    return mcp.callTool(GCAL, "list_calendars", {}).then(function (r) {
+      var p = r.payload || {};
+      var cals = (Array.isArray(p.calendars) ? p.calendars : []).filter(function (c) { return c.summary !== "Todoist"; });
+      if (!cals.length) cals = [{ summary: "" }];
+      var failed = [];
+      return Promise.all(cals.map(function (c) {
+        var input = Object.assign({}, range, c.id ? { calendarId: c.id } : {});
+        return mcp.callTool(GCAL, "list_events", input).then(function (r2) {
+          var q = r2.payload || {};
+          return (Array.isArray(q.events) ? q.events : []).map(function (e) { e.__cal = c.summary || ""; return e; });
+        }, function (e) { failed.push(e); return []; });
+      })).then(function (groups) {
+        if (failed.length === cals.length) throw failed[0];
+        var seen = {}, all = [];
+        groups.forEach(function (g) { g.forEach(function (e) {
+          if (e.status === "cancelled") return;
+          var k = e.id || (e.__cal + e.summary + JSON.stringify(e.start));
+          if (!seen[k]) { seen[k] = 1; all.push(e); }
+        }); });
+        events = all; eventsState = "ok"; renderEvents();
+      });
+    }).catch(function (e) {
+      if (eventsState !== "ok") { eventsState = errText(e, "Google Agenda"); events = []; renderEvents(); }
+    }).then(function () { loadingEvents = false; });
   }
   /* watches never ask for consent; one deliberate click makes a call that does */
   function askMcp() {
     if (!mcp) return;
     Promise.all([
       mcp.callTool(TODOIST, "find-tasks-by-date", { startDate: "today", daysCount: 1, limit: 1 }).catch(function () {}),
-      mcp.callTool(GCAL, "list_events", { pageSize: 1 }).catch(function () {})
+      loadEvents()
     ]).then(function () { return mcp.invalidate(); }).catch(function () {});
   }
   function noMcp() {
