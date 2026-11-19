@@ -19,17 +19,18 @@
   --accent: var(--focus);
   --on-accent: #ffffff;
   --warn: #a4501a;
+  --ev: #2d62a3;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --base: #14171c; --surface: #1d2128; --fg: #eceff3; --muted: #a0a9b6; --line: #313845;
-    --focus: #a8372e; --short: #236963; --long: #2f5a8d; --warn: #e0a06a;
+    --focus: #a8372e; --short: #236963; --long: #2f5a8d; --warn: #e0a06a; --ev: #6aa5e6;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --base: #14171c; --surface: #1d2128; --fg: #eceff3; --muted: #a0a9b6; --line: #313845;
-  --focus: #a8372e; --short: #236963; --long: #2f5a8d; --warn: #e0a06a;
+  --focus: #a8372e; --short: #236963; --long: #2f5a8d; --warn: #e0a06a; --ev: #6aa5e6;
   color-scheme: dark;
 }
 body { --accent: var(--focus); }
@@ -118,6 +119,54 @@ li.active .pick { font-weight: 600; color: var(--accent); }
 .settings label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
 .settings input[type="number"] { background: var(--base); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: inherit; width: 100%; }
 .settings .row { flex-direction: row; align-items: center; gap: 8px; grid-column: 1 / -1; color: var(--fg); font-size: 13px; }
+.views { display: flex; gap: 6px; margin-bottom: 16px; }
+.vtab { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 8px 16px; font-weight: 500; }
+.vtab:hover { background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.vtab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+body[data-view="cal"] { --accent: var(--short); }
+
+.calgrid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .calgrid { grid-template-columns: minmax(0, 1fr); } }
+.calhead { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.calhead h2 { flex: 1; font-size: 18px; display: block; }
+.calhead .ghost { min-width: 36px; }
+.dow, .cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.dow span { text-align: center; font-size: 11px; color: var(--muted); padding: 2px 0 4px; text-transform: uppercase; letter-spacing: .06em; }
+.cell {
+  min-height: 98px; min-width: 0; overflow: hidden; text-align: left;
+  background: var(--base); border: 1px solid var(--line); border-radius: 8px;
+  padding: 4px; display: flex; flex-direction: column; gap: 3px;
+}
+.cell:hover { border-color: var(--muted); }
+.cell.out { opacity: .55; }
+.cell.sel { outline: 2px solid var(--accent); outline-offset: -1px; }
+.num { font: 600 12px var(--font-body); font-variant-numeric: tabular-nums; width: 22px; height: 22px; display: grid; place-items: center; flex: 0 0 auto; }
+.cell.today .num { background: var(--accent); color: var(--on-accent); border-radius: 50%; }
+.chips { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.chip { display: block; font-size: 11px; line-height: 1.3; padding: 1px 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-left: 3px solid; }
+.chip.tk { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); border-color: var(--accent); }
+.chip.ev { background: color-mix(in srgb, var(--ev) 16%, var(--surface)); border-color: var(--ev); }
+.chip.p1 { font-weight: 600; }
+.more { font-size: 11px; color: var(--muted); padding-left: 2px; }
+.dots { display: none; gap: 3px; flex-wrap: wrap; }
+.dot { width: 7px; height: 7px; border-radius: 50%; }
+.dot.tk { background: var(--accent); }
+.dot.ev { background: var(--ev); }
+@media (max-width: 640px) {
+  .chips { display: none; }
+  .dots { display: flex; }
+  .cell { min-height: 56px; }
+  .dow span { font-size: 10px; letter-spacing: 0; }
+}
+.legend { display: flex; gap: 14px; margin-top: 12px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+.legend .tk { background: var(--accent); }
+.legend .ev { background: var(--ev); }
+.tag { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 1px 5px; border-radius: 4px; margin-right: 6px; vertical-align: 1px; }
+.tag.tk { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--accent); }
+.tag.ev { background: color-mix(in srgb, var(--ev) 18%, var(--surface)); color: var(--ev); }
+.p1mark { color: var(--warn); font-weight: 600; font-size: 12px; margin-left: 6px; }
+#calNote { margin-bottom: 12px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--warn) 14%, var(--surface)); }
 @media (prefers-reduced-motion: reduce) { body, .timer, .bar i { transition: none; } }
 </style>
 
@@ -141,6 +190,12 @@ li.active .pick { font-weight: 600; color: var(--accent); }
     </div>
   </div>
 
+  <nav class="views" role="tablist" aria-label="Seções">
+    <button class="vtab" role="tab" id="vtab-timer" data-view="timer" aria-selected="true">Timer</button>
+    <button class="vtab" role="tab" id="vtab-cal" data-view="cal" aria-selected="false">Calendário</button>
+  </nav>
+
+  <div id="view-timer">
   <div class="grid">
     <div class="col">
       <section class="timer" aria-label="Timer">
@@ -175,6 +230,38 @@ li.active .pick { font-weight: 600; color: var(--accent); }
           <button type="submit" id="addBtn">Adicionar</button>
         </form>
       </section>
+    </div>
+  </div>
+  </div>
+
+  <div id="view-cal" hidden>
+    <div id="calNote" class="state" hidden></div>
+    <div class="calgrid">
+      <section class="panel" aria-label="Calendário do mês">
+        <div class="calhead">
+          <button class="ghost" id="prevM" aria-label="Mês anterior">&lsaquo;</button>
+          <h2 id="monTitle"></h2>
+          <button class="ghost" id="todayM">Hoje</button>
+          <button class="ghost" id="nextM" aria-label="Próximo mês">&rsaquo;</button>
+        </div>
+        <div class="dow" aria-hidden="true"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span></div>
+        <div class="cells" id="cells"></div>
+        <div class="legend"><span><i class="tk"></i>Tarefa do Todoist</span><span><i class="ev"></i>Compromisso da agenda</span></div>
+      </section>
+      <div class="col">
+        <section class="panel" aria-labelledby="dayTitle">
+          <h2 id="dayTitle"><span class="dayhead" id="dayName" style="font:inherit;color:inherit"></span> <span id="dayCount"></span></h2>
+          <div id="dayBody"></div>
+        </section>
+        <section class="panel" aria-labelledby="odTitle">
+          <h2 id="odTitle">Atrasadas <span id="odCount"></span></h2>
+          <div id="odBody"></div>
+        </section>
+        <section class="panel" aria-labelledby="ndTitle">
+          <h2 id="ndTitle">Sem data <span id="ndCount"></span></h2>
+          <div id="ndBody"></div>
+        </section>
+      </div>
     </div>
   </div>
 </div>
@@ -517,14 +604,278 @@ li.active .pick { font-weight: 600; color: var(--accent); }
   }
   function noMcp() {
     tasksState = eventsState = "Os conectores do Todoist e do Google Agenda só funcionam quando a página é aberta no claude.ai.";
-    renderTasks(); renderEvents();
+    cal.tState = cal.eState = tasksState;
+    renderTasks(); renderEvents(); renderCal();
   }
   function initMcp() {
     if (!window.claude || !window.claude.use) { noMcp(); return; }
-    window.claude.use("mcp").then(function (m) { if (!m) { noMcp(); return; } mcp = m; watch(); }, noMcp);
+    window.claude.use("mcp").then(function (m) {
+      if (!m) { noMcp(); return; }
+      mcp = m; watch(); loadCal();
+    }, noMcp);
   }
 
+  /* ---------- aba Calendário: tudo que tenho para fazer, por data ---------- */
+  var view = "timer";
+  var curMonth = new Date(); curMonth = new Date(curMonth.getFullYear(), curMonth.getMonth(), 1);
+  var selDay = localDate();
+  var cal = { tasks: {}, events: {}, overdue: [], nodate: [], subs: 0, tState: "loading", eState: "loading" };
+  var calSeq = 0;
+
+  function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+  function gridStart() { return addDays(curMonth, -curMonth.getDay()); }
+  function gridDays() {
+    var dim = new Date(curMonth.getFullYear(), curMonth.getMonth() + 1, 0).getDate();
+    return Math.ceil((curMonth.getDay() + dim) / 7) * 7;
+  }
+  function hhmm(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function dayOf(s) { return typeof s === "string" ? s.slice(0, 10) : ""; }
+  function byDue(a, b) { return parseDue(a).localeCompare(parseDue(b)); }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function shortDate(k) { return k.slice(8, 10) + "/" + k.slice(5, 7); }
+  function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function eventKeys(e) {
+    var st = e.start;
+    if (st && typeof st === "object" && st.date && !st.dateTime) {
+      var a = new Date(st.date + "T00:00:00");
+      var b = e.end && e.end.date ? new Date(e.end.date + "T00:00:00") : addDays(a, 1);
+      var keys = [];
+      for (var d = a, i = 0; d < b && i < 42; d = addDays(d, 1), i++) keys.push(localDate(d));
+      return keys.length ? keys : [st.date];
+    }
+    var t = toDate(st);
+    return t ? [localDate(t)] : [];
+  }
+
+  function loadCal() {
+    if (!mcp || view !== "cal") return;
+    var seq = ++calSeq, gs = gridStart(), total = gridDays();
+    var calls = [mcp.callTool(TODOIST, "find-tasks-by-date", { startDate: localDate(gs), daysCount: Math.min(30, total), overdueOption: "exclude-overdue", limit: 100 })];
+    if (total > 30) calls.push(mcp.callTool(TODOIST, "find-tasks-by-date", { startDate: localDate(addDays(gs, 30)), daysCount: total - 30, overdueOption: "exclude-overdue", limit: 100 }));
+    calls.push(mcp.callTool(TODOIST, "find-tasks-by-date", { startDate: "today", overdueOption: "overdue-only", limit: 100 }));
+    calls.push(mcp.callTool(TODOIST, "find-tasks", { filter: "no date", limit: 100 }));
+    Promise.all(calls).then(function (rs) {
+      if (seq !== calSeq) return;
+      var list = function (r) { var p = (r && r.payload) || {}; return Array.isArray(p.tasks) ? p.tasks : []; };
+      var nd = list(rs[rs.length - 1]), od = list(rs[rs.length - 2]);
+      var seen = {}, map = {};
+      rs.slice(0, rs.length - 1).forEach(function (r) {
+        list(r).forEach(function (t) {
+          if (t.checked || seen[t.id]) return;
+          seen[t.id] = 1;
+          var k = dayOf(parseDue(t));
+          if (k) (map[k] = map[k] || []).push(t);
+        });
+      });
+      cal.tasks = map;
+      cal.overdue = od.filter(function (t) { return !t.checked; }).sort(byDue);
+      cal.nodate = nd.filter(function (t) { return !t.checked && !t.parentId; });
+      cal.subs = nd.filter(function (t) { return !t.checked && t.parentId; }).length;
+      cal.tState = "ok"; renderCal();
+    }).catch(function (e) {
+      if (seq !== calSeq) return;
+      cal.tState = errText(e, "Todoist"); renderCal();
+    });
+
+    mcp.callTool(GCAL, "list_calendars", {}).then(function (r) {
+      var p = r.payload || {};
+      var cals = (Array.isArray(p.calendars) ? p.calendars : []).filter(function (c) { return c.summary !== "Todoist"; });
+      if (!cals.length) cals = [{ summary: "" }];
+      var failed = [];
+      return Promise.all(cals.map(function (c) {
+        var input = { startTime: localDate(gs) + "T00:00:00", endTime: localDate(addDays(gs, total)) + "T00:00:00", orderBy: "startTime", pageSize: 250 };
+        if (c.id) input.calendarId = c.id;
+        return mcp.callTool(GCAL, "list_events", input).then(function (r2) {
+          var q = r2.payload || {};
+          return (Array.isArray(q.events) ? q.events : []).map(function (e) { e.__cal = c.summary || ""; return e; });
+        }, function (e) { failed.push(e); return []; });
+      })).then(function (groups) {
+        if (failed.length === cals.length) throw failed[0];
+        if (seq !== calSeq) return;
+        var seen = {}, map = {};
+        groups.forEach(function (g) { g.forEach(function (e) {
+          if (e.status === "cancelled") return;
+          var id = e.id || (e.__cal + e.summary + JSON.stringify(e.start));
+          if (seen[id]) return; seen[id] = 1;
+          var st = e.start, allDay = !!(st && typeof st === "object" && st.date && !st.dateTime);
+          var s = toDate(st); if (!s) return;
+          var ev = { title: e.summary || "Sem título", start: s, allDay: allDay, cal: e.__cal, where: e.location || "" };
+          eventKeys(e).forEach(function (k) { (map[k] = map[k] || []).push(ev); });
+        }); });
+        cal.events = map; cal.eState = "ok"; renderCal();
+      });
+    }).catch(function (e) {
+      if (seq !== calSeq) return;
+      cal.eState = errText(e, "Google Agenda"); renderCal();
+    });
+  }
+
+  function dayItems(key) {
+    var out = [];
+    (cal.events[key] || []).forEach(function (e) {
+      out.push({ kind: "ev", title: e.title, allDay: e.allDay, time: e.allDay ? "" : hhmm(e.start), sort: e.allDay ? "00:00" : hhmm(e.start), sub: (e.where || e.cal) === e.title ? "" : (e.where || e.cal) });
+    });
+    (cal.tasks[key] || []).forEach(function (t) {
+      var due = parseDue(t), time = due.indexOf("T") > -1 ? due.slice(11, 16) : "";
+      out.push({ kind: "tk", title: t.content, time: time, sort: time || "99:99", task: t, sub: t.duration || "" });
+    });
+    out.sort(function (a, b) { return a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : 0; });
+    return out;
+  }
+
+  function completeCal(t) {
+    if (!mcp) return;
+    Object.keys(cal.tasks).forEach(function (k) { cal.tasks[k] = cal.tasks[k].filter(function (x) { return x.id !== t.id; }); });
+    cal.overdue = cal.overdue.filter(function (x) { return x.id !== t.id; });
+    cal.nodate = cal.nodate.filter(function (x) { return x.id !== t.id; });
+    if (activeId === t.id) { activeId = null; lsSet("pa-active", null); renderControls(); }
+    renderCal();
+    mcp.callTool(TODOIST, "complete-tasks", { ids: [t.id] })
+      .then(function () { return mcp.invalidate(TODOIST); })
+      .catch(function (e) { cal.tState = errText(e, "Todoist"); })
+      .then(function () { loadCal(); });
+  }
+
+  function taskRow(t, showDate) {
+    var li = el("li");
+    var chk = el("button", "check"); chk.type = "button";
+    chk.setAttribute("aria-label", "Concluir: " + t.content);
+    chk.addEventListener("click", function () { completeCal(t); });
+    var what = el("span", "what");
+    what.appendChild(document.createTextNode(t.content));
+    if (t.priority === "p1") what.appendChild(el("span", "p1mark", "p1"));
+    var due = parseDue(t), bits = [];
+    if (showDate && due) bits.push(shortDate(dayOf(due)));
+    if (due.indexOf("T") > -1) bits.push(due.slice(11, 16));
+    if (t.duration) bits.push(t.duration);
+    if (bits.length) what.appendChild(el("small", "", bits.join(" · ")));
+    li.appendChild(chk); li.appendChild(what);
+    return li;
+  }
+
+  function renderCal() {
+    if (view !== "cal") return;
+    $("monTitle").textContent = cap(curMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }).replace(" de ", " "));
+
+    var note = $("calNote"), msgs = [];
+    if (cal.tState !== "ok" && cal.tState !== "loading") msgs.push(cal.tState);
+    if (cal.eState !== "ok" && cal.eState !== "loading" && cal.eState !== cal.tState) msgs.push(cal.eState);
+    note.textContent = ""; note.hidden = !msgs.length;
+    if (msgs.length) {
+      note.appendChild(document.createTextNode(msgs.join(" ") + " "));
+      var rb = el("button", "", "Permitir e tentar de novo"); rb.type = "button";
+      rb.addEventListener("click", loadCal); note.appendChild(rb);
+    }
+
+    var gs = gridStart(), total = gridDays(), todayKey = localDate();
+    var cells = $("cells"); cells.textContent = "";
+    for (var i = 0; i < total; i++) {
+      (function (d) {
+        var key = localDate(d), items = dayItems(key);
+        var b = el("button", "cell" + (d.getMonth() !== curMonth.getMonth() ? " out" : "") + (key === todayKey ? " today" : "") + (key === selDay ? " sel" : ""));
+        b.type = "button";
+        var nT = items.filter(function (x) { return x.kind === "tk"; }).length, nE = items.length - nT;
+        b.setAttribute("aria-label", d.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }) + ": " + nT + " tarefas, " + nE + " compromissos");
+        b.setAttribute("aria-pressed", String(key === selDay));
+        b.appendChild(el("span", "num", String(d.getDate())));
+        var chips = el("div", "chips");
+        items.slice(0, 3).forEach(function (it) {
+          chips.appendChild(el("span", "chip " + it.kind + (it.task && it.task.priority === "p1" ? " p1" : ""), (it.time ? it.time + " " : "") + it.title));
+        });
+        if (items.length > 3) chips.appendChild(el("span", "more", "+" + (items.length - 3) + " mais"));
+        b.appendChild(chips);
+        var dots = el("div", "dots");
+        items.slice(0, 6).forEach(function (it) { dots.appendChild(el("span", "dot " + it.kind)); });
+        b.appendChild(dots);
+        b.addEventListener("click", function () {
+          selDay = key;
+          if (d.getMonth() !== curMonth.getMonth()) { curMonth = new Date(d.getFullYear(), d.getMonth(), 1); resetCal(); }
+          renderCal();
+        });
+        cells.appendChild(b);
+      })(addDays(gs, i));
+    }
+
+    /* selected day */
+    var sd = new Date(selDay + "T00:00:00"), items = dayItems(selDay);
+    $("dayName").textContent = cap(sd.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }));
+    $("dayCount").textContent = items.length ? items.length + (items.length === 1 ? " item" : " itens") : "";
+    var db = $("dayBody"); db.textContent = "";
+    if (!items.length) { db.appendChild(el("div", "state", (cal.tState === "loading" || cal.eState === "loading") ? "Carregando…" : "Nada marcado para este dia.")); }
+    else {
+      var ul = el("ul", "list");
+      items.forEach(function (it) {
+        if (it.kind === "tk") {
+          var li = taskRow(it.task, false);
+          li.insertBefore(el("span", "tag tk", "Tarefa"), li.querySelector(".what").firstChild);
+          ul.appendChild(li);
+        } else {
+          var e = el("li");
+          e.appendChild(el("span", "when", it.allDay ? "Dia todo" : it.time));
+          var w = el("span", "what");
+          w.appendChild(el("span", "tag ev", "Agenda"));
+          w.appendChild(document.createTextNode(it.title));
+          if (it.sub) w.appendChild(el("small", "", it.sub));
+          e.appendChild(w); ul.appendChild(e);
+        }
+      });
+      db.appendChild(ul);
+    }
+
+    /* overdue */
+    var od = $("odBody"); od.textContent = "";
+    $("odCount").textContent = cal.overdue.length ? String(cal.overdue.length) : "";
+    if (cal.tState === "loading") od.appendChild(el("div", "state", "Carregando…"));
+    else if (!cal.overdue.length) od.appendChild(el("div", "state", "Nenhuma tarefa atrasada."));
+    else { var ou = el("ul", "list"); cal.overdue.forEach(function (t) { ou.appendChild(taskRow(t, true)); }); od.appendChild(ou); }
+
+    /* no date */
+    var nb = $("ndBody"); nb.textContent = "";
+    $("ndCount").textContent = cal.nodate.length ? String(cal.nodate.length) : "";
+    if (cal.tState === "loading") nb.appendChild(el("div", "state", "Carregando…"));
+    else {
+      if (!cal.nodate.length) nb.appendChild(el("div", "state", "Nenhuma tarefa sem data."));
+      else { var nu = el("ul", "list"); cal.nodate.forEach(function (t) { nu.appendChild(taskRow(t, false)); }); nb.appendChild(nu); }
+      if (cal.subs) nb.appendChild(el("div", "state", "Mais " + cal.subs + (cal.subs === 1 ? " subtarefa sem data, dentro de outra tarefa." : " subtarefas sem data, dentro de outras tarefas.")));
+    }
+  }
+
+  function resetCal() { cal.tasks = {}; cal.events = {}; cal.tState = cal.eState = "loading"; renderCal(); loadCal(); }
+  function gotoMonth(delta) {
+    curMonth = new Date(curMonth.getFullYear(), curMonth.getMonth() + delta, 1);
+    selDay = localDate(curMonth);
+    resetCal();
+  }
+  $("prevM").addEventListener("click", function () { gotoMonth(-1); });
+  $("nextM").addEventListener("click", function () { gotoMonth(1); });
+  $("todayM").addEventListener("click", function () {
+    var n = new Date(); curMonth = new Date(n.getFullYear(), n.getMonth(), 1); selDay = localDate(n); resetCal();
+  });
+
+  function setView(v) {
+    view = v;
+    $("view-timer").hidden = v !== "timer";
+    $("view-cal").hidden = v !== "cal";
+    $("settingsBtn").hidden = v !== "timer";
+    if (v !== "timer") { $("settingsPanel").hidden = true; $("settingsBtn").setAttribute("aria-expanded", "false"); }
+    document.body.setAttribute("data-view", v);
+    $("vtab-timer").setAttribute("aria-selected", String(v === "timer"));
+    $("vtab-cal").setAttribute("aria-selected", String(v === "cal"));
+    if (v === "cal") { renderCal(); loadCal(); }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".vtab"), function (b) {
+    b.addEventListener("click", function () {
+      var v = b.getAttribute("data-view");
+      setView(v);
+      try { location.hash = v === "cal" ? "calendario" : "timer"; } catch (e) {}
+    });
+  });
+  window.addEventListener("hashchange", function () { setView(location.hash === "#calendario" ? "cal" : "timer"); });
+  setInterval(function () { if (view === "cal") loadCal(); }, 120000);
+
   renderControls();
+  if (location.hash === "#calendario") setView("cal");
   initStats();
   initMcp();
 })();
